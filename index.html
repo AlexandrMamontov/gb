@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конструктор благоустройства</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 30px;
+        }
+        .controls {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .preview {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .preview-image {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: opacity 0.3s;
+        }
+        .option-group {
+            border: 1px solid #eee;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .option-group h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .option-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .option-btn {
+            padding: 8px 12px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .option-btn:hover {
+            background-color: #e0e0e0;
+        }
+        .option-btn.active {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        .option-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .toggle-btn {
+            padding: 8px 12px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .toggle-btn.active {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        .filename {
+            margin-top: 10px;
+            padding: 5px;
+            background: #f5f5f5;
+            border-radius: 3px;
+            word-break: break-all;
+        }
+        .loading {
+            display: none;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Конструктор благоустройства</h1>
+    
+    <div class="container">
+        <div class="controls">
+            <div class="option-group">
+                <h3>Размер</h3>
+                <div class="option-buttons" id="size-btns"></div>
+            </div>
+            
+            <div class="option-group">
+                <h3>Конфигурация</h3>
+                <div class="option-buttons" id="config-btns"></div>
+            </div>
+            
+            <div class="option-group">
+                <h3>Ограда</h3>
+                <div class="option-buttons" id="fence-btns"></div>
+            </div>
+            
+            <div class="option-group">
+                <h3>Дополнительные опции</h3>
+                <div class="option-buttons">
+                    <button id="cladding-btn" class="toggle-btn">Облицовка: Нет</button>
+                    <button id="monument-btn" class="toggle-btn">Памятник: Нет</button>
+                    <button id="background-btn" class="toggle-btn">Фон: Нет</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview">
+            <div class="loading" id="loading">Загрузка изображения...</div>
+            <div id="preview-image" class="preview-image"></div>
+            <div id="filename" class="filename"></div>
+        </div>
+    </div>
+
+    <script>
+        // Все доступные изображения
+        const ALL_IMAGES = [
+'120X180-config1-fence1-claddingN-monumentN-backgroundN.png',
+'120X180-config1-fence1-claddingN-monumentN-backgroundY.png',
+'120X180-config1-fence1-claddingN-monumentY-backgroundN.png',
+'120X180-config1-fence1-claddingN-monumentY-backgroundY.png',
+'120X180-config1-fence1-claddingY-monumentN-backgroundN.png',
+'120X180-config1-fence1-claddingY-monumentN-backgroundY.png',
+'120X180-config1-fence1-claddingY-monumentY-backgroundN.png',
+'120X180-config1-fence1-claddingY-monumentY-backgroundY.png',
+'120X180-config2-fence1-claddingN-monumentN-backgroundN.png',
+'120X180-config2-fence1-claddingN-monumentN-backgroundY.png',
+'120X180-config2-fence1-claddingN-monumentY-backgroundN.png',
+'120X180-config2-fence1-claddingN-monumentY-backgroundY.png',
+'120X180-config2-fence1-claddingY-monumentN-backgroundN.png',
+'120X180-config2-fence1-claddingY-monumentN-backgroundY.png',
+'120X180-config2-fence1-claddingY-monumentY-backgroundN.png',
+'120X180-config2-fence1-claddingY-monumentY-backgroundY.png',
+'120X180-config3-fence1-claddingN-monumentN-backgroundN.png',
+'120X180-config3-fence1-claddingN-monumentN-backgroundY.png',
+'120X180-config3-fence1-claddingN-monumentY-backgroundN.png',
+'120X180-config3-fence1-claddingN-monumentY-backgroundY.png',
+'120X180-config3-fence1-claddingY-monumentN-backgroundN.png',
+'120X180-config3-fence1-claddingY-monumentN-backgroundY.png',
+'120X180-config3-fence1-claddingY-monumentY-backgroundN.png',
+'120X180-config3-fence1-claddingY-monumentY-backgroundY.png',
+'120X180-config4-fence1-claddingN-monumentN-backgroundN.png',
+'120X180-config4-fence1-claddingN-monumentN-backgroundY.png',
+'120X180-config4-fence1-claddingN-monumentY-backgroundN.png',
+'120X180-config4-fence1-claddingN-monumentY-backgroundY.png',
+'120X180-config4-fence2-claddingN-monumentN-backgroundN.png',
+'120X180-config4-fence2-claddingN-monumentN-backgroundY.png',
+'120X180-config4-fence2-claddingN-monumentY-backgroundN.png',
+'120X180-config4-fence2-claddingN-monumentY-backgroundY.png',
+'120X180-config4-fence3-claddingN-monumentN-backgroundN.png',
+'120X180-config4-fence3-claddingN-monumentN-backgroundY.png',
+'120X180-config4-fence3-claddingN-monumentY-backgroundN.png',
+'120X180-config4-fence3-claddingN-monumentY-backgroundY.png',
+'120X180-config4-fence4-claddingN-monumentN-backgroundN.png',
+'120X180-config4-fence4-claddingN-monumentN-backgroundY.png',
+'120X180-config4-fence4-claddingN-monumentY-backgroundN.png',
+'120X180-config4-fence4-claddingN-monumentY-backgroundY.png',
+'120X180-config4-fence5-claddingN-monumentN-backgroundN.png',
+'120X180-config4-fence5-claddingN-monumentN-backgroundY.png',
+'120X180-config4-fence5-claddingN-monumentY-backgroundN.png',
+'120X180-config4-fence5-claddingN-monumentY-backgroundY.png',
+'120X180-config5-fence1-claddingN-monumentN-backgroundN.png',
+'120X180-config5-fence1-claddingN-monumentN-backgroundY.png',
+'120X180-config5-fence1-claddingN-monumentY-backgroundN.png',
+'120X180-config5-fence1-claddingN-monumentY-backgroundY.png',
+'210X180-config1-fence1-claddingN-monumentN-backgroundN.png',
+'210X180-config1-fence1-claddingN-monumentN-backgroundY.png',
+'210X180-config1-fence1-claddingN-monumentY-backgroundN.png',
+'210X180-config1-fence1-claddingN-monumentY-backgroundY.png',
+'210X180-config1-fence1-claddingY-monumentN-backgroundN.png',
+'210X180-config1-fence1-claddingY-monumentN-backgroundY.png',
+'210X180-config1-fence1-claddingY-monumentY-backgroundN.png',
+'210X180-config1-fence1-claddingY-monumentY-backgroundY.png',
+'210X180-config2-fence1-claddingN-monumentN-backgroundN.png',
+'210X180-config2-fence1-claddingN-monumentN-backgroundY.png',
+'210X180-config2-fence1-claddingN-monumentY-backgroundN.png',
+'210X180-config2-fence1-claddingN-monumentY-backgroundY.png',
+'210X180-config2-fence1-claddingY-monumentN-backgroundN.png',
+'210X180-config2-fence1-claddingY-monumentN-backgroundY.png',
+'210X180-config2-fence1-claddingY-monumentY-backgroundN.png',
+'210X180-config2-fence1-claddingY-monumentY-backgroundY.png',
+'210X180-config2-fence2-claddingN-monumentN-backgroundN.png',
+'210X180-config2-fence2-claddingN-monumentN-backgroundY.png',
+'210X180-config2-fence2-claddingN-monumentY-backgroundN.png',
+'210X180-config2-fence2-claddingN-monumentY-backgroundY.png',
+'210X180-config2-fence2-claddingY-monumentN-backgroundN.png',
+'210X180-config2-fence2-claddingY-monumentN-backgroundY.png',
+'210X180-config2-fence2-claddingY-monumentY-backgroundN.png',
+'210X180-config2-fence2-claddingY-monumentY-backgroundY.png',
+'210X180-config2-fence3-claddingN-monumentN-backgroundN.png',
+'210X180-config2-fence3-claddingN-monumentN-backgroundY.png',
+'210X180-config2-fence3-claddingN-monumentY-backgroundN.png',
+'210X180-config2-fence3-claddingN-monumentY-backgroundY.png',
+'210X180-config2-fence3-claddingY-monumentN-backgroundN.png',
+'210X180-config2-fence3-claddingY-monumentN-backgroundY.png',
+'210X180-config2-fence3-claddingY-monumentY-backgroundN.png',
+'210X180-config2-fence3-claddingY-monumentY-backgroundY.png',
+'210X180-config2-fence4-claddingN-monumentN-backgroundN.png',
+'210X180-config2-fence4-claddingN-monumentN-backgroundY.png',
+'210X180-config2-fence4-claddingN-monumentY-backgroundN.png',
+'210X180-config2-fence4-claddingN-monumentY-backgroundY.png',
+'210X180-config2-fence4-claddingY-monumentN-backgroundN.png',
+'210X180-config2-fence4-claddingY-monumentN-backgroundY.png',
+'210X180-config2-fence4-claddingY-monumentY-backgroundN.png',
+'210X180-config2-fence4-claddingY-monumentY-backgroundY.png',
+'210X180-config3-fence1-claddingN-monumentN-backgroundN.png',
+'210X180-config3-fence1-claddingN-monumentN-backgroundY.png',
+'210X180-config3-fence1-claddingN-monumentY-backgroundN.png',
+'210X180-config3-fence1-claddingN-monumentY-backgroundY.png',
+'210X180-config3-fence1-claddingY-monumentN-backgroundN.png',
+'210X180-config3-fence1-claddingY-monumentN-backgroundY.png',
+'210X180-config3-fence1-claddingY-monumentY-backgroundN.png',
+'210X180-config3-fence1-claddingY-monumentY-backgroundY.png',
+'210X180-config3-fence2-claddingN-monumentN-backgroundN.png',
+'210X180-config3-fence2-claddingN-monumentN-backgroundY.png',
+'210X180-config3-fence2-claddingN-monumentY-backgroundN.png',
+'210X180-config3-fence2-claddingN-monumentY-backgroundY.png',
+'210X180-config3-fence2-claddingY-monumentN-backgroundN.png',
+'210X180-config3-fence2-claddingY-monumentN-backgroundY.png',
+'210X180-config3-fence2-claddingY-monumentY-backgroundN.png',
+'210X180-config3-fence2-claddingY-monumentY-backgroundY.png',
+'210X180-config3-fence3-claddingN-monumentN-backgroundN.png',
+'210X180-config3-fence3-claddingN-monumentN-backgroundY.png',
+'210X180-config3-fence3-claddingN-monumentY-backgroundN.png',
+'210X180-config3-fence3-claddingN-monumentY-backgroundY.png',
+'210X180-config3-fence3-claddingY-monumentN-backgroundN.png',
+'210X180-config3-fence3-claddingY-monumentN-backgroundY.png',
+'210X180-config3-fence3-claddingY-monumentY-backgroundN.png',
+'210X180-config3-fence3-claddingY-monumentY-backgroundY.png'
+        ];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Элементы DOM
+            const sizeBtnsContainer = document.getElementById('size-btns');
+            const configBtnsContainer = document.getElementById('config-btns');
+            const fenceBtnsContainer = document.getElementById('fence-btns');
+            const claddingBtn = document.getElementById('cladding-btn');
+            const monumentBtn = document.getElementById('monument-btn');
+            const backgroundBtn = document.getElementById('background-btn');
+            const previewImage = document.getElementById('preview-image');
+            const loadingElement = document.getElementById('loading');
+            const filenameElement = document.getElementById('filename');
+            
+            // Состояние приложения
+            let availableOptions = {
+                sizes: [],
+                configs: [],
+                fences: []
+            };
+            
+            let currentSelection = {
+                size: null,
+                config: null,
+                fence: null,
+                cladding: 'N',
+                monument: 'N',
+                background: 'N'
+            };
+            
+            // Инициализация - анализируем доступные опции
+            analyzeAvailableOptions();
+            createOptionButtons();
+            setupToggleButtons();
+            setDefaultSelections();
+            updateUI();
+            
+            // Анализ доступных опций из имен файлов
+            function analyzeAvailableOptions() {
+                const options = {
+                    sizes: new Set(),
+                    configs: new Set(),
+                    fences: new Set()
+                };
+                
+                ALL_IMAGES.forEach(filename => {
+                    const parts = filename.split('-');
+                    if (parts.length < 6) return;
+                    
+                    // Размер
+                    options.sizes.add(parts[0]);
+                    
+                    // Конфигурация
+                    if (parts[1].startsWith('config')) {
+                        options.configs.add(parts[1]);
+                    }
+                    
+                    // Ограда
+                    if (parts[2].startsWith('fence')) {
+                        options.fences.add(parts[2]);
+                    }
+                });
+                
+                availableOptions.sizes = Array.from(options.sizes).sort();
+                availableOptions.configs = Array.from(options.configs).sort((a, b) => 
+                    parseInt(a.replace('config', '')) - parseInt(b.replace('config', ''))
+                );
+                availableOptions.fences = Array.from(options.fences).sort((a, b) => 
+                    parseInt(a.replace('fence', '')) - parseInt(b.replace('fence', ''))
+                );
+            }
+            
+            // Создание кнопок выбора
+            function createOptionButtons() {
+                // Кнопки размеров
+                availableOptions.sizes.forEach(size => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn';
+                    btn.textContent = size;
+                    btn.dataset.value = size;
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('#size-btns .option-btn').forEach(b => {
+                            b.classList.remove('active');
+                        });
+                        btn.classList.add('active');
+                        currentSelection.size = size;
+                        currentSelection.config = null;
+                        currentSelection.fence = null;
+                        updateUI();
+                    });
+                    sizeBtnsContainer.appendChild(btn);
+                });
+                
+                // Кнопки конфигураций
+                availableOptions.configs.forEach(config => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn';
+                    btn.textContent = config;
+                    btn.dataset.value = config;
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('#config-btns .option-btn').forEach(b => {
+                            b.classList.remove('active');
+                        });
+                        btn.classList.add('active');
+                        currentSelection.config = config;
+                        currentSelection.fence = null;
+                        updateUI();
+                    });
+                    configBtnsContainer.appendChild(btn);
+                });
+                
+                // Кнопки оград
+                availableOptions.fences.forEach(fence => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn';
+                    btn.textContent = fence;
+                    btn.dataset.value = fence;
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('#fence-btns .option-btn').forEach(b => {
+                            b.classList.remove('active');
+                        });
+                        btn.classList.add('active');
+                        currentSelection.fence = fence;
+                        updateUI();
+                    });
+                    fenceBtnsContainer.appendChild(btn);
+                });
+            }
+            
+            // Установка выбранных по умолчанию значений
+            function setDefaultSelections() {
+                // Активируем первую кнопку размера
+                if (availableOptions.sizes.length > 0) {
+                    const firstSizeBtn = sizeBtnsContainer.querySelector('.option-btn');
+                    if (firstSizeBtn) {
+                        firstSizeBtn.classList.add('active');
+                        currentSelection.size = firstSizeBtn.dataset.value;
+                    }
+                }
+                
+                // Активируем первую кнопку конфигурации
+                if (availableOptions.configs.length > 0) {
+                    const firstConfigBtn = configBtnsContainer.querySelector('.option-btn');
+                    if (firstConfigBtn) {
+                        firstConfigBtn.classList.add('active');
+                        currentSelection.config = firstConfigBtn.dataset.value;
+                    }
+                }
+                
+                // Активируем первую кнопку ограды
+                if (availableOptions.fences.length > 0) {
+                    const firstFenceBtn = fenceBtnsContainer.querySelector('.option-btn');
+                    if (firstFenceBtn) {
+                        firstFenceBtn.classList.add('active');
+                        currentSelection.fence = firstFenceBtn.dataset.value;
+                    }
+                }
+                
+                // Устанавливаем памятник "Да" по умолчанию
+                currentSelection.monument = 'Y';
+                monumentBtn.textContent = 'Памятник: Да';
+                monumentBtn.classList.add('active');
+            }
+            
+            // Настройка кнопок-переключателей
+            function setupToggleButtons() {
+                claddingBtn.addEventListener('click', () => {
+                    currentSelection.cladding = currentSelection.cladding === 'N' ? 'Y' : 'N';
+                    claddingBtn.textContent = `Облицовка: ${currentSelection.cladding === 'Y' ? 'Да' : 'Нет'}`;
+                    claddingBtn.classList.toggle('active');
+                    updateUI();
+                });
+                
+                monumentBtn.addEventListener('click', () => {
+                    currentSelection.monument = currentSelection.monument === 'N' ? 'Y' : 'N';
+                    monumentBtn.textContent = `Памятник: ${currentSelection.monument === 'Y' ? 'Да' : 'Нет'}`;
+                    monumentBtn.classList.toggle('active');
+                    updateUI();
+                });
+                
+                backgroundBtn.addEventListener('click', () => {
+                    currentSelection.background = currentSelection.background === 'N' ? 'Y' : 'N';
+                    backgroundBtn.textContent = `Фон: ${currentSelection.background === 'Y' ? 'Да' : 'Нет'}`;
+                    backgroundBtn.classList.toggle('active');
+                    updateUI();
+                });
+            }
+            
+            // Обновление UI на основе текущего состояния
+            function updateUI() {
+                updateAvailableOptions();
+                updatePreview();
+            }
+            
+            // Обновление доступных опций
+            function updateAvailableOptions() {
+                // Получаем все возможные комбинации для текущего выбора
+                const availableCombinations = getAllAvailableCombinations();
+                
+                // Обновляем доступность кнопок конфигураций
+                if (currentSelection.size) {
+                    const availableConfigs = new Set();
+                    availableCombinations.forEach(comb => {
+                        const parts = comb.split('-');
+                        if (parts.length > 1) availableConfigs.add(parts[1]);
+                    });
+                    
+                    document.querySelectorAll('#config-btns .option-btn').forEach(btn => {
+                        btn.disabled = !availableConfigs.has(btn.dataset.value);
+                    });
+                }
+                
+                // Обновляем доступность кнопок оград
+                if (currentSelection.size && currentSelection.config) {
+                    const availableFences = new Set();
+                    availableCombinations.forEach(comb => {
+                        const parts = comb.split('-');
+                        if (parts.length > 2) availableFences.add(parts[2]);
+                    });
+                    
+                    document.querySelectorAll('#fence-btns .option-btn').forEach(btn => {
+                        btn.disabled = !availableFences.has(btn.dataset.value);
+                    });
+                }
+            }
+            
+            // Получение всех доступных комбинаций для текущего выбора
+            function getAllAvailableCombinations() {
+                return ALL_IMAGES.filter(filename => {
+                    const parts = filename.split('-');
+                    if (parts.length < 6) return false;
+                    
+                    // Проверяем соответствие выбранному размеру
+                    if (currentSelection.size && parts[0] !== currentSelection.size) {
+                        return false;
+                    }
+                    
+                    // Проверяем соответствие выбранной конфигурации
+                    if (currentSelection.config && parts[1] !== currentSelection.config) {
+                        return false;
+                    }
+                    
+                    // Проверяем соответствие выбранной ограде
+                    if (currentSelection.fence && parts[2] !== currentSelection.fence) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            // Обновление превью
+            function updatePreview() {
+                if (!currentSelection.size || !currentSelection.config || !currentSelection.fence) {
+                    previewImage.style.backgroundImage = 'none';
+                    filenameElement.textContent = 'Выберите размер, конфигурацию и ограду';
+                    return;
+                }
+                
+                const imageName = `${currentSelection.size}-${currentSelection.config}-${currentSelection.fence}-cladding${currentSelection.cladding}-monument${currentSelection.monument}-background${currentSelection.background}.png`;
+                
+                if (ALL_IMAGES.includes(imageName)) {
+                    loadingElement.style.display = 'block';
+                    previewImage.style.opacity = 0;
+                    
+                    // В реальном проекте здесь должен быть путь к вашей папке images
+                    const imagePath = `images/${currentSelection.size}/${imageName}`;
+                    
+                    const img = new Image();
+                    img.onload = function() {
+                        previewImage.style.backgroundImage = `url(${imagePath})`;
+                        previewImage.style.opacity = 1;
+                        loadingElement.style.display = 'none';
+                    };
+                    img.src = imagePath;
+                    
+                    filenameElement.textContent = imageName;
+                } else {
+                    previewImage.style.backgroundImage = 'none';
+                    filenameElement.textContent = 'Изображение не найдено для выбранной комбинации';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
